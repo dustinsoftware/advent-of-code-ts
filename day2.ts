@@ -32,3 +32,26 @@ export function day2(input: string) {
 
     return instructions.join(',');
 }
+
+export function getFirstNumber(input: string) {
+    return day2(input).split(',').map(Number)[0];
+}
+
+export function bruteForce(input: string) {
+    for (let a = 0; a < 100; a++) {
+        for (let b = 0; b < 100; b++) {
+            let instructions = input.split(',').map(Number);
+            instructions[1] = a;
+            instructions[2] = b;
+            if (getFirstNumber(instructions.join(',')) === 19690720) {
+                return [a,b];
+            }
+        }
+    }
+    return [];
+}
+
+export function sillyMath(input: string) {
+    const solution = bruteForce(input);
+    return 100 * solution[0] + solution[1];
+}
