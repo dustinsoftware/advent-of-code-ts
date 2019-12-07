@@ -1,7 +1,7 @@
 export function runOpcodes(
-    instructionsString: string
+    instructionsString: string,
+    inputValue = 1
 ): { output: number[]; instructions: number[] } {
-    const inputValue = 1; // apparently this could be changed later?
     let position = 0;
     let instructions = instructionsString.split(',').map(Number);
     let output: number[] = [];
@@ -38,11 +38,56 @@ export function runOpcodes(
             const positionA = instructions[position + 1];
             output.push(getA(positionA));
             position += 2;
+        } else if (instruction === 5) {
+            // jump if true
+            const [positionA, positionB] = instructions.slice(
+                position + 1,
+                position + 3
+            );
+
+            if (getA(positionA) !== 0) {
+                position = getB(positionB);
+            } else {
+                position += 3;
+            }
+        } else if (instruction === 6) {
+            // jump if false
+            const [positionA, positionB] = instructions.slice(
+                position + 1,
+                position + 3
+            );
+
+            if (getA(positionA) === 0) {
+                position = getB(positionB);
+            } else {
+                position += 3;
+            }
+        } else if (instruction === 7) {
+            // less than
+            const [positionA, positionB, positionC] = instructions.slice(
+                position + 1,
+                position + 4
+            );
+
+            instructions[positionC] =
+                getA(positionA) < getB(positionB) ? 1 : 0;
+            position += 4;
+        } else if (instruction === 8) {
+            // equals
+            const [positionA, positionB, positionC] = instructions.slice(
+                position + 1,
+                position + 4
+            );
+
+            instructions[positionC] =
+                getA(positionA) === getB(positionB) ? 1 : 0;
+            position += 4;
         } else if (instruction === 99) {
             break;
         } else {
             throw new Error(
-                'Failed! ' + JSON.stringify({ instructions, instruction })
+                'Illegal instruction! ' +
+                    JSON.stringify({ instructions, instruction })
             );
         }
     }
