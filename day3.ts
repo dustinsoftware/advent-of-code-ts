@@ -1,6 +1,7 @@
 export type XY = {
     X: number;
     Y: number;
+    steps?: number;
 };
 
 export enum Direction {
@@ -11,8 +12,8 @@ export enum Direction {
 }
 
 export type Movement = {
-    current: XY;
-    next: XY;
+    current: XY & { steps: number };
+    next: XY & { steps: number };
     direction: Direction;
 };
 
@@ -27,7 +28,7 @@ export function taxicabDistance(source: XY, dest: XY) {
 
 export function mapToGrid(start: XY, paths: Path[]): Movement[] {
     let grid: Movement[] = [];
-    let next = { ...start };
+    let next = { ...start, steps: 0 };
     for (let path of paths) {
         let current = next;
         next = move(next, path);
@@ -40,13 +41,13 @@ export function mapToGrid(start: XY, paths: Path[]): Movement[] {
 export function intersects(
     firstGrid: Movement[],
     secondGrid: Movement[]
-): XY[] {
+): (XY & { steps: number })[] {
     // for each line in the grid
     // if LR, only consider UD in grid. vice versa.
     // for our UD line range, do any Y coordinates match a line in the grid?
     // if so, check the X range of grid line. will need to sort this. if line.X1 < current.X < line.X2, we have a collision.
 
-    let intersections: XY[] = [];
+    let intersections: (XY & { steps: number })[] = [];
     for (let firstGridMovement of firstGrid) {
         // an optimization, we could drop this..
         let directions = [Direction.U, Direction.D].includes(
@@ -86,8 +87,31 @@ export function intersects(
                     secondGridMovement.current.X < firstX2 &&
                     secondY < firstGridMovement.current.Y &&
                     firstGridMovement.current.Y < secondY2
-                )
-                    intersections.push({ X: secondGridMovement.current.X, Y: firstGridMovement.current.Y });
+                ) {
+                    // // found the outer bounds. loop over the grid to find the intersection
+                    // const firstMovementPoints = Array(firstX2 - firstX).fill(0).map((x, i) => ({ X: firstX + i, Y: firstGridMovement.current.Y }));
+                    // const secondMovementPoints = Array(secondY2 - secondY).fill(0).map((x, i) => ({ Y: secondY + i, X: secondGridMovement.current.X }));
+
+                    // first LR, second UD.
+                    const firstSteps = Math.abs(
+                        firstGridMovement.current.X -
+                            secondGridMovement.current.X
+                    );
+                    const secondSteps = Math.abs(
+                        secondGridMovement.current.Y -
+                            firstGridMovement.current.Y
+                    );
+
+                    intersections.push({
+                        X: secondGridMovement.current.X,
+                        Y: firstGridMovement.current.Y,
+                        steps:
+                            firstGridMovement.current.steps +
+                            firstSteps +
+                            secondGridMovement.current.steps +
+                            secondSteps
+                    });
+                }
             }
 
             // probably could rotate the grid 90 to avoid this duplication, but whatever...
@@ -96,12 +120,12 @@ export function intersects(
                     secondGridMovement.direction
                 )
             ) {
-                if (
-                    firstGridMovement.current.X !== firstGridMovement.next.X
-                ) {
+                if (firstGridMovement.current.X !== firstGridMovement.next.X) {
                     throw new Error('Logic error, X coordinates must be equal');
                 }
-                if (secondGridMovement.current.Y !== secondGridMovement.next.Y) {
+                if (
+                    secondGridMovement.current.Y !== secondGridMovement.next.Y
+                ) {
                     throw new Error('Logic error, Y coordinates must be equal');
                 }
                 // first is UD, sort Y coordinates
@@ -119,8 +143,27 @@ export function intersects(
                     secondGridMovement.current.Y < firstY2 &&
                     secondX < firstGridMovement.current.X &&
                     firstGridMovement.current.X < secondX2
-                )
-                    intersections.push({ X: firstGridMovement.current.X, Y: secondGridMovement.current.Y });
+                ) {
+                    // first UD, second LR.
+                    const firstSteps = Math.abs(
+                        firstGridMovement.current.Y -
+                            secondGridMovement.current.Y
+                    );
+                    const secondSteps = Math.abs(
+                        firstGridMovement.current.X -
+                            secondGridMovement.current.X
+                    );
+
+                    intersections.push({
+                        X: firstGridMovement.current.X,
+                        Y: secondGridMovement.current.Y,
+                        steps:
+                            firstGridMovement.current.steps +
+                            firstSteps +
+                            secondGridMovement.current.steps +
+                            secondSteps
+                    });
+                }
             }
         }
     }
@@ -134,8 +177,8 @@ export function parseInstructions(instructions: string): Path[] {
     }));
 }
 
-export function move(source: XY, path: Path): XY {
-    let next = { ...source };
+export function move(source: XY, path: Path): XY & { steps: number } {
+    let next = { ...source, steps: (source.steps || 0) + path.distance };
     if (path.direction === Direction.U) {
         next.Y += path.distance;
     }
