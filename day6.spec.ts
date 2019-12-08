@@ -1,4 +1,4 @@
-import { parseInput, buildGraph } from './day6';
+import { parseInput, buildGraph, buildSantaGraph } from './day6';
 
 test('parseInput', () => {
     expect(
@@ -43,4 +43,41 @@ J)K
 K)L
 `)
     ).toStrictEqual(42);
+    expect(
+        buildGraph(`
+COM)B
+B)C
+C)D
+D)E
+E)F
+B)G
+G)H
+D)I
+E)J
+J)K
+K)L
+K)YOU
+I)SAN
+`)
+    ).toStrictEqual(54);
 });
+
+test('buildSantaGraph', () => {
+    expect(
+        buildSantaGraph(`
+COM)B
+B)C
+C)D
+D)E
+E)F
+B)G
+G)H
+D)I
+E)J
+J)K
+K)L
+K)YOU
+I)SAN
+`)
+    ).toStrictEqual(4);
+})
