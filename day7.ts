@@ -1,10 +1,8 @@
-export function runOpcodes(
+export function* runOpcodes(
     instructionsString: string,
-    inputs: number[] = []
-): { output: number[]; instructions: number[] } {
+): Generator<{ instruction: number; output?: number }, { instruction: number; output?: number }, number> {
     let position = 0;
     let instructions = instructionsString.split(',').map(Number);
-    let output: number[] = [];
 
     let [immediateA, immediateB] = [false, false];
     let getA = (value: number) => (immediateA ? value : instructions[value]);
@@ -32,7 +30,7 @@ export function runOpcodes(
             position += 4;
         } else if (instruction === 3) {
             const newPosition = instructions[position + 1];
-            const input = inputs.shift();
+            const input = yield { instruction: 3 };
             if (input === undefined) {
                 throw new Error('Logic error, no input provided');
             }
@@ -40,7 +38,7 @@ export function runOpcodes(
             position += 2;
         } else if (instruction === 4) {
             const positionA = instructions[position + 1];
-            output.push(getA(positionA));
+            yield { instruction: 4, output: getA(positionA) };
             position += 2;
         } else if (instruction === 5) {
             // jump if true
@@ -96,18 +94,38 @@ export function runOpcodes(
         }
     }
 
-    return { output, instructions };
+    return { instruction: 99 };
 }
 
-export function amplify(program: string, inputs: number[]) {
+export function amplify(program: string, amplifyInputs: number[]) {
     let currentResult = 0;
     while (true) {
-        let input = inputs.shift();
+        let input = amplifyInputs.shift();
         if (input === undefined) {
             break;
         }
 
-        currentResult = runOpcodes(program, [input, currentResult]).output[0];
+        let iterator = runOpcodes(program);
+        let nextOutput = iterator.next();
+
+        if (nextOutput.value.instruction !== 3) {
+            throw new Error('Logic error, expected input.');
+        }
+        nextOutput = iterator.next(input);
+        if (nextOutput.value.instruction !== 3) {
+            throw new Error('Logic error, expected input.');
+        }
+        nextOutput = iterator.next(currentResult);
+
+        if (nextOutput.value.instruction !== 4 || nextOutput.value.output === undefined) {
+            throw new Error('Logic error, expected output.');
+        }
+        currentResult = nextOutput.value.output;
+
+        nextOutput = iterator.next(currentResult);
+        if (nextOutput.value.instruction !== 99) {
+            throw new Error('Logic error, expected halt.');
+        }
     }
     return currentResult;
 }
