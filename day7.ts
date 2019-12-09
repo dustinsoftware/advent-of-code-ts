@@ -1,6 +1,10 @@
 export function* runOpcodes(
-    instructionsString: string,
-): Generator<{ instruction: number; output?: number }, { instruction: number; output?: number }, number> {
+    instructionsString: string
+): Generator<
+    { instruction: number; output?: number },
+    { instruction: number; output?: number },
+    number | undefined
+> {
     let position = 0;
     let instructions = instructionsString.split(',').map(Number);
 
@@ -71,8 +75,7 @@ export function* runOpcodes(
                 position + 4
             );
 
-            instructions[positionC] =
-                getA(positionA) < getB(positionB) ? 1 : 0;
+            instructions[positionC] = getA(positionA) < getB(positionB) ? 1 : 0;
             position += 4;
         } else if (instruction === 8) {
             // equals
@@ -99,34 +102,50 @@ export function* runOpcodes(
 
 export function amplify(program: string, amplifyInputs: number[]) {
     let currentResult = 0;
-    while (true) {
-        let input = amplifyInputs.shift();
-        if (input === undefined) {
-            break;
-        }
+    let programInstances = Array(amplifyInputs.length)
+        .fill(0)
+        .map(() => runOpcodes(program));
+    let halt = false;
+    let iterations = 0;
 
-        let iterator = runOpcodes(program);
-        let nextOutput = iterator.next();
+    if (amplifyInputs.length !== 5) {
+        throw new Error('Logic error, expected 5 inputs');
+    }
 
-        if (nextOutput.value.instruction !== 3) {
-            throw new Error('Logic error, expected input.');
-        }
-        nextOutput = iterator.next(input);
-        if (nextOutput.value.instruction !== 3) {
-            throw new Error('Logic error, expected input.');
-        }
-        nextOutput = iterator.next(currentResult);
+    // load initial combination
+    for (let input in amplifyInputs) {
+        programInstances[input].next(); // initial run
+        programInstances[input].next(amplifyInputs[input]);
+    }
 
-        if (nextOutput.value.instruction !== 4 || nextOutput.value.output === undefined) {
-            throw new Error('Logic error, expected output.');
-        }
-        currentResult = nextOutput.value.output;
+    while (!halt && iterations++ < 1000000) {
+        for (let program of programInstances) {
+            // guaranteed to be waiting on an input instruction
+            let nextOutput = program.next(currentResult);
 
-        nextOutput = iterator.next(currentResult);
-        if (nextOutput.value.instruction !== 99) {
-            throw new Error('Logic error, expected halt.');
+            if (nextOutput.value === undefined) {
+                throw new Error('Logic error, generator returned undefined');
+            }
+            if (
+                nextOutput.value.instruction !== 4 ||
+                nextOutput.value.output === undefined
+            ) {
+                throw new Error('Logic error, expected output. Got ' + nextOutput.value.instruction);
+            }
+
+            currentResult = nextOutput.value.output;
+            nextOutput = program.next(); // continue from output, next call will either be input or exit
+            if (nextOutput.value.instruction === 99) {
+                halt = true;
+            } else if (nextOutput.value.instruction !== 3) {
+                throw new Error('Logic error, expected input. Got ' + nextOutput.value.instruction);
+            }
         }
     }
+    if (iterations === 1000000) {
+        throw new Error('Logic error, infinite loop');
+    }
+
     return currentResult;
 }
 
@@ -139,7 +158,7 @@ export function generatePermutations(inputs: number[]): number[][] {
         }
         // heap's algorithm
         if (size === 1) {
-            foundPermutations.push([ ...inputs ]);
+            foundPermutations.push([...inputs]);
         }
 
         for (let i = 0; i < size; i++) {
@@ -162,9 +181,9 @@ export function generatePermutations(inputs: number[]): number[][] {
     return foundPermutations;
 }
 
-export function getHighestThruster(program: string) {
+export function getHighestThruster(program: string, combinations: number[]) {
     let max = 0;
-    for (let combination of generatePermutations([0,1,2,3,4])) {
+    for (let combination of generatePermutations(combinations)) {
         max = Math.max(max, amplify(program, combination));
     }
     return max;
