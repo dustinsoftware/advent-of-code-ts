@@ -68,11 +68,50 @@ export function findVisiblePoints(grid: XY[], current: XY): XY[] {
     return reducedPoints;
 }
 
-export function findBestPoint(grid: XY[]): { point: XY, visiblePoints: XY[] } {
+export function findBestPoint(grid: XY[]): { point: XY; visiblePoints: XY[] } {
     return grid
         .map(point => ({
             point,
             visiblePoints: findVisiblePoints(grid, point)
         }))
         .sort((a, b) => b.visiblePoints.length - a.visiblePoints.length)[0];
+}
+
+export function nukeGrid(grid: XY[], current: XY, stopValue: number): XY {
+    let iterations = 0;
+    let nukedPoints: { angle: number, point: XY}[] = [];
+        let nukedPointsSet: Set<XY> = new Set();
+
+    while (grid.length && nukedPoints.length < stopValue) {
+        if (iterations++ > 1000000) {
+            throw new Error('Logic error, infinite loop');
+        }
+
+        let points = grid
+            .filter(
+                x => x.value === 1 && (x.X !== current.X || x.Y !== current.Y)
+            )
+            .map(point => ({ angle: getAngle(current, point), point }));
+
+        // remove duplicate angles
+        let angleMap: Map<number, XY[]> = new Map();
+        for (let point of points) {
+            let mapReference = angleMap.get(point.angle);
+            if (mapReference) {
+                mapReference.push(point.point);
+            } else {
+                angleMap.set(point.angle, [point.point]);
+            }
+        }
+
+        let orderedByAngle = Array(...angleMap).sort((a, b) => a[0] - b[0]);
+
+        for (let angle of orderedByAngle) {
+            nukedPoints.push({ angle: angle[0], point: angle[1][0] });
+            nukedPointsSet.add(angle[1][0]);
+        }
+
+        grid = grid.filter(x => !nukedPointsSet.has(x));
+    }
+    return nukedPoints[stopValue - 1].point;
 }

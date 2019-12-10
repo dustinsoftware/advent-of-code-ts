@@ -1,4 +1,4 @@
-import { parseGrid, findVisiblePoints, getSortedPoints, getAngle, findBestPoint } from './day10';
+import { parseGrid, findVisiblePoints, getSortedPoints, getAngle, findBestPoint, nukeGrid } from './day10';
 
 test('should work', () => {
     expect(
@@ -92,4 +92,6 @@ test('findVisiblePoints', () => {
     // expect(findVisiblePoints(grid2, { X: 11, Y: 13, value: 1 }).length).toStrictEqual(210);
     // expect(findBestPoint(grid2).point).toStrictEqual({ X: 11, Y: 13, value: 1 });
     expect(findBestPoint(grid2).visiblePoints.length).toStrictEqual(326);
+
+    expect(nukeGrid(grid2, findBestPoint(grid2).point, 200)).toStrictEqual([]);
 });
