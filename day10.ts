@@ -4,9 +4,9 @@ export type XY = {
     value?: number;
 };
 
-export function parseGrid(grid: string): XY[] {
-    return grid
-        .split('\n')
+export function parseGrid(grid: string, reverse = false): XY[] {
+    let splitGrid = reverse ? grid.split('\n').reverse() : grid.split('\n');
+    return splitGrid
         .filter(Boolean)
         .map((row, y) =>
             row.split('').map((char, x) => {
@@ -79,8 +79,8 @@ export function findBestPoint(grid: XY[]): { point: XY; visiblePoints: XY[] } {
 
 export function nukeGrid(grid: XY[], current: XY, stopValue: number): XY {
     let iterations = 0;
-    let nukedPoints: { angle: number, point: XY}[] = [];
-        let nukedPointsSet: Set<XY> = new Set();
+    let nukedPoints: { angle: number; point: XY }[] = [];
+    let nukedPointsSet: Set<XY> = new Set();
 
     while (grid.length && nukedPoints.length < stopValue) {
         if (iterations++ > 1000000) {
@@ -92,7 +92,7 @@ export function nukeGrid(grid: XY[], current: XY, stopValue: number): XY {
             .filter(
                 x => x.value === 1 && (x.X !== current.X || x.Y !== current.Y)
             )
-            .map(point => ({ angle: (getAngle(current, point) + 180) % 360, point }));
+            .map(point => ({ angle: getAngle(current, point), point }));
 
         // remove duplicate angles
         let angleMap: Map<number, XY[]> = new Map();
@@ -105,9 +105,12 @@ export function nukeGrid(grid: XY[], current: XY, stopValue: number): XY {
             }
         }
 
-        let reducedPoints: { angle: number, points: XY[] }[] = [];
+        let reducedPoints: { angle: number; points: XY[] }[] = [];
         for (let angle of angleMap) {
-            reducedPoints.push({ angle: angle[0], points: getSortedPoints(angle[1], angle[0]) });
+            reducedPoints.push({
+                angle: angle[0],
+                points: getSortedPoints(angle[1], angle[0])
+            });
         }
 
         let orderedByAngle = reducedPoints.sort((a, b) => a.angle - b.angle);
@@ -115,10 +118,12 @@ export function nukeGrid(grid: XY[], current: XY, stopValue: number): XY {
         for (let angle of orderedByAngle) {
             nukedPoints.push({ angle: angle.angle, point: angle.points[0] });
             nukedPointsSet.add(angle.points[0]);
-
         }
 
         grid = grid.filter(x => !nukedPointsSet.has(x));
     }
-    return nukedPoints[stopValue - 1].point;
+    let point = nukedPoints[stopValue - 1].point;
+
+    // total hack because the grid is flipped; hard code the number of rows there are - 1 here to get Y
+    return { X: point.X, Y: 32 - point.Y };
 }
