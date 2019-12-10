@@ -67,3 +67,12 @@ export function findVisiblePoints(grid: XY[], current: XY): XY[] {
     }
     return reducedPoints;
 }
+
+export function findBestPoint(grid: XY[]): { point: XY, visiblePoints: XY[] } {
+    return grid
+        .map(point => ({
+            point,
+            visiblePoints: findVisiblePoints(grid, point)
+        }))
+        .sort((a, b) => b.visiblePoints.length - a.visiblePoints.length)[0];
+}
