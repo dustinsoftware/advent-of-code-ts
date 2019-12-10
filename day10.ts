@@ -87,11 +87,12 @@ export function nukeGrid(grid: XY[], current: XY, stopValue: number): XY {
             throw new Error('Logic error, infinite loop');
         }
 
+        // grid has to be flipped which throws a lot of logic off
         let points = grid
             .filter(
                 x => x.value === 1 && (x.X !== current.X || x.Y !== current.Y)
             )
-            .map(point => ({ angle: getAngle(current, point), point }));
+            .map(point => ({ angle: (getAngle(current, point) + 180) % 360, point }));
 
         // remove duplicate angles
         let angleMap: Map<number, XY[]> = new Map();
@@ -104,11 +105,17 @@ export function nukeGrid(grid: XY[], current: XY, stopValue: number): XY {
             }
         }
 
-        let orderedByAngle = Array(...angleMap).sort((a, b) => a[0] - b[0]);
+        let reducedPoints: { angle: number, points: XY[] }[] = [];
+        for (let angle of angleMap) {
+            reducedPoints.push({ angle: angle[0], points: getSortedPoints(angle[1], angle[0]) });
+        }
+
+        let orderedByAngle = reducedPoints.sort((a, b) => a.angle - b.angle);
 
         for (let angle of orderedByAngle) {
-            nukedPoints.push({ angle: angle[0], point: angle[1][0] });
-            nukedPointsSet.add(angle[1][0]);
+            nukedPoints.push({ angle: angle.angle, point: angle.points[0] });
+            nukedPointsSet.add(angle.points[0]);
+
         }
 
         grid = grid.filter(x => !nukedPointsSet.has(x));
