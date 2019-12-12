@@ -47,7 +47,7 @@ export function mergeLayers(grid: XY[]): string {
     let layerAsString: string = finalLayer.map((value, i) => i % columnSize === 0 ? value + '\n' : value).join('');
 
     // a bit lazy to fix this up
-    console.log(layerAsString);
+    // console.log(layerAsString);
     return '';
 }
 
