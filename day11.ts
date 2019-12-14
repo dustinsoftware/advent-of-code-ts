@@ -255,8 +255,8 @@ export function* runTestMovements(
     return { instruction: 99 };
 }
 
-export function walkOnGrid(program: string, testMovements: number[] = []) {
-    let start: XY = { X: 0, Y: 0, hasPainted: false, value: 0 };
+export function walkOnGrid(program: string, initialValue: number, testMovements: number[] = []): XY[] {
+    let start: XY = { X: 0, Y: 0, hasPainted: false, value: initialValue };
     let cells: XY[] = [start];
     let robot: Robot = { direction: Direction.U, X: 0, Y: 0 };
 
@@ -301,5 +301,30 @@ export function walkOnGrid(program: string, testMovements: number[] = []) {
         }
     }
 
-    return cells.filter(x => x.hasPainted).length;
+    return cells;
+}
+
+export function printGrid(source: XY[]): string {
+    let rows: string[] = [];
+    let xOffset = smallest(source.map(x => x.X));
+    for (let row = largest(source.map(x => x.Y)); row >= smallest(source.map(x => x.Y)); row--) {
+        let rowArray = Array(largest(source.map(x => x.X)) - smallest(source.map(x => x.X))).fill(' ');
+        for (let cell of source.filter(x => x.Y === row)) {
+            rowArray[cell.X - xOffset] = cell.value === 1 ? 'X' : ' ';
+        }
+        rows.push(rowArray.join('').trim());
+        console.log(rowArray.join(' ').trim());
+    }
+
+
+    return rows.join('\n');
+
+}
+
+export function smallest(numbers: number[]): number {
+    return numbers.sort((a, b) => a - b)[0];
+}
+
+export function largest(numbers: number[]): number {
+    return numbers.sort((a, b) => b - a)[0];
 }
