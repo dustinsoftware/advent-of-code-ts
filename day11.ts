@@ -313,7 +313,7 @@ export function printGrid(source: XY[]): string {
             rowArray[cell.X - xOffset] = cell.value === 1 ? 'X' : ' ';
         }
         rows.push(rowArray.join('').trim());
-        console.log(rowArray.join(' ').trim());
+        // console.log(rowArray.join(' ').trim());
     }
 
 
