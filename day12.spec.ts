@@ -5,7 +5,13 @@ import {
     setVelocity,
     setPositions,
     totalEnergy,
-    printTable
+    printTable,
+    findHistoryForAxis,
+    SearchTree,
+    treeContains,
+    insertIntoTree,
+    Axis,
+    lowestMultiple
 } from './day12';
 
 test('parseInput', () => {
@@ -55,12 +61,36 @@ pos=<x= 2, y= 0, z= 4>, vel=<x= 1, y=-1, z=-1>`);
 
 test('totalEnergy', () => {
     let getMoons = () =>
-        parseInput(`<x=-8, y=-10, z=0>
-<x=5, y=5, z=10>
-<x=2, y=-7, z=3>
-<x=9, y=-8, z=-3>`);
+        parseInput(`<x=3, y=3, z=0>
+<x=4, y=-16, z=2>
+<x=-10, y=-6, z=5>
+<x=-3, y=0, z=-13>`);
 
-    expect(totalEnergy(simulateVelocity(getMoons(), 100))).toStrictEqual(1940);
+    expect(totalEnergy(simulateVelocity(getMoons(), 1000))).toStrictEqual(
+        12351
+    );
+});
+
+test('findHistory', () => {
+    let getMoons = () =>
+        parseInput(`<x=3, y=3, z=0>
+<x=4, y=-16, z=2>
+<x=-10, y=-6, z=5>
+<x=-3, y=0, z=-13>`);
+
+    expect(
+        lowestMultiple([
+            findHistoryForAxis(getMoons(), Axis.X),
+            findHistoryForAxis(getMoons(), Axis.Y),
+            findHistoryForAxis(getMoons(), Axis.Z)
+        ])
+    ).toStrictEqual(380635029877596);
+});
+
+test('lowestMultiple', () => {
+    expect(lowestMultiple([1, 2, 3])).toBe(6);
+    expect(lowestMultiple([7, 13, 17])).toBe(1547);
+    expect(lowestMultiple([18, 28, 44])).toBe(2772);
 });
 
 test('setVelocity', () => {
@@ -85,4 +115,19 @@ test('setPositions', () => {
         moon: { X: 2, Y: 2, Z: 3 },
         velocity: { X: 1, Y: 0, Z: 0 }
     });
+});
+
+test('treeContains', () => {
+    let tree: SearchTree<number> = { value: false, child: new Map() };
+
+    let insertAndVerify = (numbers: number[]) => {
+        expect(treeContains(numbers, tree)).toBe(false);
+        expect(insertIntoTree(numbers, tree));
+        expect(treeContains(numbers, tree)).toBe(true);
+    };
+
+    insertAndVerify([1, 2, 3]);
+    insertAndVerify([1]);
+    insertAndVerify([2, 3, 4]);
+    insertAndVerify([1, 2, 3, 4]);
 });

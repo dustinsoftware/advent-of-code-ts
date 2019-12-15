@@ -46,6 +46,153 @@ export function simulateVelocity(moons: XYZ[], steps: number) {
     return moonsWithVelocity;
 }
 
+export type SearchTree<T> = {
+    value: boolean;
+    child: Map<T, SearchTree<T>>;
+};
+
+export function treeContains<T>(inputs: T[], tree: SearchTree<T>) {
+    let currentRoot = tree;
+    for (let input of inputs) {
+        let nextRoot = currentRoot.child.get(input);
+        if (!nextRoot) {
+            return false;
+        }
+        currentRoot = nextRoot;
+    }
+    return currentRoot.value === true;
+}
+
+export function insertIntoTree<T>(inputs: T[], tree: SearchTree<T>) {
+    let currentRoot = tree;
+    for (let input of inputs) {
+        let nextRoot = currentRoot.child.get(input);
+        if (!nextRoot) {
+            nextRoot = { value: false, child: new Map() };
+            currentRoot.child.set(input, nextRoot);
+        }
+        currentRoot = nextRoot;
+    }
+    currentRoot.value = true;
+}
+
+export enum Axis {
+    X = 'X',
+    Y = 'Y',
+    Z = 'Z'
+}
+
+export function lowestMultiple(inputs: number[]) {
+    let max = largest(inputs);
+    let candidate = max;
+
+    let computeLowestCommon = (low: number, innerHigh: number, outerHigh: number): number => {
+        while(true) {
+            if (innerHigh % low === 0) {
+                return innerHigh;
+            }
+            innerHigh += outerHigh;
+        }
+    };
+
+    let lowestCommon = (low: number, high: number) => {
+        return computeLowestCommon(low, high, high);
+    }
+
+    for (let input of inputs) {
+        candidate = lowestCommon(input, candidate);
+    }
+
+    return candidate;
+}
+
+export function findHistoryForAxis(moons: XYZ[], axis: Axis) {
+    let time = Date.now();
+    let moonsWithVelocity: MoonVelocity[] = moons.map(moon => ({
+        moon,
+        velocity: { X: 0, Y: 0, Z: 0 }
+    }));
+
+    let iterations = 0;
+
+    let moonPairs = [
+        { moonA: moonsWithVelocity[0], moonB: moonsWithVelocity[1] },
+        { moonA: moonsWithVelocity[0], moonB: moonsWithVelocity[2] },
+        { moonA: moonsWithVelocity[0], moonB: moonsWithVelocity[3] },
+        { moonA: moonsWithVelocity[1], moonB: moonsWithVelocity[2] },
+        { moonA: moonsWithVelocity[1], moonB: moonsWithVelocity[3] },
+        { moonA: moonsWithVelocity[2], moonB: moonsWithVelocity[3] }
+    ];
+
+    let firstState = [
+        moonsWithVelocity[0].moon[axis],
+        moonsWithVelocity[0].velocity[axis],
+        moonsWithVelocity[1].moon[axis],
+        moonsWithVelocity[1].velocity[axis],
+        moonsWithVelocity[2].moon[axis],
+        moonsWithVelocity[2].velocity[axis],
+        moonsWithVelocity[3].moon[axis],
+        moonsWithVelocity[3].velocity[axis]
+    ];
+
+    while (true) {
+        if (Date.now() - time > 10000) {
+            throw new Error('too many iterations - ' + iterations);
+        }
+        iterations++;
+
+        for (let pairs of moonPairs) {
+            pairs.moonA.velocity[axis] = velocityForAxis(
+                pairs.moonA.velocity[axis],
+                pairs.moonA.moon[axis],
+                pairs.moonB.moon[axis]
+            );
+
+            pairs.moonB.velocity[axis] = velocityForAxis(
+                pairs.moonB.velocity[axis],
+                pairs.moonB.moon[axis],
+                pairs.moonA.moon[axis]
+            );
+        }
+
+        for (let moon of moonsWithVelocity) {
+            setPositions(moon);
+        }
+
+        if (
+            arrayEquals(
+                [
+                    moonsWithVelocity[0].moon[axis],
+                    moonsWithVelocity[0].velocity[axis],
+                    moonsWithVelocity[1].moon[axis],
+                    moonsWithVelocity[1].velocity[axis],
+                    moonsWithVelocity[2].moon[axis],
+                    moonsWithVelocity[2].velocity[axis],
+                    moonsWithVelocity[3].moon[axis],
+                    moonsWithVelocity[3].velocity[axis]
+                ],
+                firstState
+            )
+        ) {
+            return iterations;
+        }
+    }
+}
+
+export function arrayEquals<T>(a: T[], b: T[]) {
+    if (a.length !== b.length) {
+        throw new Error('Logic error, must be equal lengths');
+    }
+
+    for (let index in a) {
+        if (a[index] !== b[index]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 export function setPositions(moon: MoonVelocity) {
     moon.moon.X += moon.velocity.X;
     moon.moon.Y += moon.velocity.Y;
@@ -53,10 +200,10 @@ export function setPositions(moon: MoonVelocity) {
     return moon;
 }
 
-export function setVelocity(moonA: MoonVelocity, moonB: MoonVelocity) {
-    let velocityForAxis = (velocity: number, a: number, b: number) =>
-        velocity + (a < b ? 1 : a > b ? -1 : 0);
+let velocityForAxis = (velocity: number, a: number, b: number) =>
+    velocity + (a < b ? 1 : a > b ? -1 : 0);
 
+export function setVelocity(moonA: MoonVelocity, moonB: MoonVelocity) {
     moonA.velocity.X = velocityForAxis(
         moonA.velocity.X,
         moonA.moon.X,
@@ -150,6 +297,10 @@ export function getPairs<T>(moons: T[]): { moonA: T; moonB: T }[] {
 }
 
 export function largest(numbers: number[]): number {
+    return numbers.sort((a, b) => b - a)[0];
+}
+
+export function smallest(numbers: number[]): number {
     return numbers.sort((a, b) => b - a)[0];
 }
 
